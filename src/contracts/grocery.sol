@@ -32,6 +32,11 @@ contract Celogroceries {
 
     mapping (uint => Grocery) internal groceries;
 
+    modifier onlyOwner(uint _index){
+        require(groceries[_index].owner == msg.sender, "only the owner can call this function");
+        _;
+    }
+
 
 /**
  addGrocery function will add a new grocery to the marketplace
@@ -58,42 +63,44 @@ contract Celogroceries {
     }
 
 /**
+ buyGrocery function will allow a user to buy a grocery using an index parameter
+ **/
+    function buyGrocery(uint _index) public payable  {
+        require(msg.sender != groceries[_index].owner);
+        require(
+          IERC20Token(cUsdTokenAddress).transferFrom(
+            msg.sender,
+            groceries[_index].owner,
+            groceries[_index].price
+          ),
+          "Transfer failed."
+        );
+        groceries[_index].sold++;
+    }
+
+/**
  toggleSoldout will toggle a soldout boolean property of a listing
  **/
-    function toggleSoldout(uint _index) external {
-        Grocery storage grocery = groceries[_index];
-        require(grocery.owner == msg.sender, "only the owner can call this function");
-        if(grocery.soldout == false){
-             grocery.soldout = true;
-        }else{
-            grocery.soldout = false;
-        }
+    function toggleSoldout(uint _index) external onlyOwner(_index){
+        groceries[_index].soldout = !groceries[_index].soldout;
     }
 
      
      /**
  changePrice function will change the price of a listing
  **/
-     function changePrice(uint _index, uint _newPrice) external {
-         Grocery storage grocery = groceries[_index];
-          require(grocery.owner == msg.sender, "only the owner can call this function");
-          grocery.price = _newPrice;
+     function changePrice(uint _index, uint _newPrice) external onlyOwner(_index){
+        groceries[_index].price = _newPrice;
      }
-
-
-
 
      /**
         deleteGroceryListing will delete a listing 
       **/
-      function deleteGroceryListing(uint _index) external {
-	        require(msg.sender == groceries[_index].owner, "Only the owner can delete listing");         
+      function deleteGroceryListing(uint _index) external onlyOwner(_index){    
             groceries[_index] = groceries[groceriesLength - 1];
             delete groceries[groceriesLength - 1];
             groceriesLength--; 
 	 }
-
-
 
      /**
      getGrocery function will get a grocery from the marketplace.
@@ -120,25 +127,6 @@ contract Celogroceries {
             g.soldout
         );
     }
-
-
-
-/**
- buyGrocery function will allow a user to buy a grocery using an index parameter
- **/
-    function buyGrocery(uint _index) public payable  {
-        require(
-          IERC20Token(cUsdTokenAddress).transferFrom(
-            msg.sender,
-            groceries[_index].owner,
-            groceries[_index].price
-          ),
-          "Transfer failed."
-        );
-        groceries[_index].sold++;
-    }
-    
-
 
     /**
  getGroceriesLength will return the length of groceries in the marketplace
